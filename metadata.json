@@ -1,0 +1,6 @@
+{
+  "name": "The Dino King",
+  "description": "Multiplayer 2D infinite runner game where players customize their dinos, create lobbies, jump over prehistoric obstacles, and compete for the top rank on the leaderboard.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
