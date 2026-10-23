@@ -55,7 +55,7 @@ class MultiplayerService {
         if (this.currentRoom && this.localPlayer) {
           try {
             navigator.sendBeacon(
-              `/api/rooms/${this.currentRoom.code}/leave`,
+              this.getServerUrl(`/api/rooms/${this.currentRoom.code}/leave`),
               JSON.stringify({ playerId: this.localPlayer.id })
             );
           } catch {}
@@ -67,6 +67,26 @@ class MultiplayerService {
         }
       });
     }
+  }
+
+  private getServerUrl(endpoint: string): string {
+    const customUrl = import.meta.env.VITE_SERVER_URL;
+    if (customUrl) {
+      return `${customUrl.replace(/\/$/, '')}${endpoint}`;
+    }
+    return endpoint;
+  }
+
+  private getWebSocketUrl(): string {
+    const customWs = import.meta.env.VITE_WS_URL;
+    if (customWs) {
+      return `${customWs.replace(/\/$/, '')}/ws`;
+    }
+    if (typeof window !== 'undefined') {
+      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      return `${protocol}//${window.location.host}/ws`;
+    }
+    return 'ws://localhost:3000/ws';
   }
 
   private reconnectTimer: number | null = null;
@@ -89,8 +109,7 @@ class MultiplayerService {
     }
 
     try {
-      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-      const wsUrl = `${protocol}//${window.location.host}/ws`;
+      const wsUrl = this.getWebSocketUrl();
       this.ws = new WebSocket(wsUrl);
 
       this.ws.onopen = () => {
@@ -141,7 +160,7 @@ class MultiplayerService {
     }
 
     try {
-      this.eventSource = new EventSource(`/api/rooms/${roomCode}/events`);
+      this.eventSource = new EventSource(this.getServerUrl(`/api/rooms/${roomCode}/events`));
       this.eventSource.onmessage = (e) => {
         try {
           const data = JSON.parse(e.data);
@@ -337,7 +356,7 @@ class MultiplayerService {
 
   async createRoom(roomName: string, hostPlayer: Player): Promise<Room> {
     try {
-      const res = await fetch('/api/rooms', {
+      const res = await fetch(this.getServerUrl('/api/rooms'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name: roomName, player: hostPlayer })
@@ -391,7 +410,7 @@ class MultiplayerService {
     const cleanCode = code.trim().toUpperCase();
 
     try {
-      const res = await fetch(`/api/rooms/${cleanCode}/join`, {
+      const res = await fetch(this.getServerUrl(`/api/rooms/${cleanCode}/join`), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ player: joiningPlayer })
@@ -491,7 +510,7 @@ class MultiplayerService {
 
     // 2. Server-Authoritative Atomic Reservation Request
     try {
-      const res = await fetch(`/api/rooms/${this.currentRoom.code}/color`, {
+      const res = await fetch(this.getServerUrl(`/api/rooms/${this.currentRoom.code}/color`), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -551,7 +570,7 @@ class MultiplayerService {
         player: this.localPlayer
       });
       try {
-        fetch(`/api/rooms/${this.currentRoom.code}/player`, {
+        fetch(this.getServerUrl(`/api/rooms/${this.currentRoom.code}/player`), {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ player: this.localPlayer })
@@ -568,7 +587,7 @@ class MultiplayerService {
     if (this.currentRoom.players.length >= 8) return;
 
     try {
-      const res = await fetch(`/api/rooms/${this.currentRoom.code}/bot`, {
+      const res = await fetch(this.getServerUrl(`/api/rooms/${this.currentRoom.code}/bot`), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' }
       });
@@ -626,7 +645,7 @@ class MultiplayerService {
     if (!this.currentRoom) return;
 
     try {
-      const res = await fetch(`/api/rooms/${this.currentRoom.code}/remove-bot`, {
+      const res = await fetch(this.getServerUrl(`/api/rooms/${this.currentRoom.code}/remove-bot`), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ botId })
@@ -669,7 +688,7 @@ class MultiplayerService {
         playerId: this.localPlayer.id
       });
 
-      const res = await fetch(`/api/rooms/${this.currentRoom.code}/start`, {
+      const res = await fetch(this.getServerUrl(`/api/rooms/${this.currentRoom.code}/start`), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ playerId: this.localPlayer.id })
@@ -722,7 +741,7 @@ class MultiplayerService {
     if (this.currentRoom.hostId !== this.localPlayer.id) return false;
 
     try {
-      const res = await fetch(`/api/rooms/${this.currentRoom.code}/restart`, {
+      const res = await fetch(this.getServerUrl(`/api/rooms/${this.currentRoom.code}/restart`), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ playerId: this.localPlayer.id })
@@ -807,7 +826,7 @@ class MultiplayerService {
 
     // REST Fallback in case WebSocket was momentarily re-connecting
     try {
-      fetch(`/api/rooms/${this.currentRoom.code}/death`, {
+      fetch(this.getServerUrl(`/api/rooms/${this.currentRoom.code}/death`), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -828,7 +847,7 @@ class MultiplayerService {
       const pid = this.localPlayer.id;
 
       try {
-        await fetch(`/api/rooms/${code}/leave`, {
+        await fetch(this.getServerUrl(`/api/rooms/${code}/leave`), {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ playerId: pid })
